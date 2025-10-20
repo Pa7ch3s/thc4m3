@@ -15,8 +15,8 @@ java {
 repositories { mavenCentral() }
 
 dependencies {
-    // Burp API JAR is provided locally
-    compileOnly files('libs/burp-extender-api.jar')
+    // Use Burp Extender API from Maven Central (no local jar needed)
+    compileOnly 'net.portswigger.burp.extender:burp-extender-api:2.3'
     compileOnly 'org.jetbrains:annotations:24.1.0'
 }
 
