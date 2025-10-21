@@ -6,232 +6,381 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.net.InetAddress;
+import java.awt.datatransfer.StringSelection;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * THC4M3 – Thick Client Bridge (MVP)
- * - Allow-list host/port/MIME to make your app’s traffic stand out.
- * - Label matching traffic in Proxy/HTTP history as [TCB].
- * - Generate a PAC file to proxy only your target hosts to Burp.
- *
- * NOTE: Burp can’t filter by OS process; we approximate via host/port rules.
+ * THC4M3 — Thick Client Helper for Burp
+ * - Safe startup (tab always shows; errors go to Extender Output)
+ * - Filters: Host (regex), Ports (CSV), MIME (regex)
+ * - Events table with labels/comments added to messages
+ * - PAC generator (copies PAC to clipboard and shows it)
+ * - Checklist sub-tab with Save/Load/Export (via ChecklistPanel)
  */
-public class BurpExtender implements IBurpExtender, ITab, IHttpListener, IProxyListener, IMessageEditorController {
+public final class BurpExtender implements IBurpExtender, ITab, IHttpListener, IProxyListener {
+
+    // ---------- Burp handles ----------
     private IBurpExtenderCallbacks callbacks;
     private IExtensionHelpers helpers;
 
-    // UI
+    // ---------- UI ----------
     private JPanel root;
-    private JTextField hostAllow;
-    private JTextField portAllow;
-    private JTextField mimeAllow;
-    private JCheckBox onlyMatches;
-    private JTextArea notes;
-    private JTable events;
+    private JTextField hostRegexField;
+    private JTextField portCsvField;
+    private JTextField mimeRegexField;
+    private JCheckBox onlyMatchChk;
     private DefaultTableModel eventsModel;
 
-    // Filters
+    // Tabs
+    private JTabbedPane tabs;
+
+    // ---------- Filters (compiled) ----------
     private Pattern hostPattern = Pattern.compile(".*");
-    private Set<Integer> allowedPorts = new HashSet<>(Arrays.asList(80, 443));
-    private Pattern mimePattern = Pattern.compile(".*");
+    private Pattern mimePattern = Pattern.compile("^(application/json|application/xml|text/.*|application/octet-stream)$");
+    private Set<Integer> allowedPorts = new HashSet<>(Arrays.asList(80, 443, 8080, 8443));
 
-    private static final String TAG = "[TCB]";
+    // ---------- Settings keys ----------
+    private static final String K_HOST   = "thc4m3.hostRegex";
+    private static final String K_PORTS  = "thc4m3.portCsv";
+    private static final String K_MIME   = "thc4m3.mimeRegex";
+    private static final String K_ONLY   = "thc4m3.onlyMatch";
 
+    private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("HH:mm:ss");
+
+    // =============================================================================================
+    //  IBurpExtender
+    // =============================================================================================
     @Override
-    public void registerExtenderCallbacks(IBurpExtenderCallbacks callbacks) {
+    public void registerExtenderCallbacks(final IBurpExtenderCallbacks callbacks) {
         this.callbacks = callbacks;
         this.helpers = callbacks.getHelpers();
-        callbacks.setExtensionName("THC4M3 – Thick Client Bridge (MVP)");
+        callbacks.setExtensionName("THC4M3");
 
-        SwingUtilities.invokeLater(this::buildUi);
-        callbacks.registerHttpListener(this);
-        callbacks.registerProxyListener(this);
-
-        log("Loaded. Set allow-lists, then optionally generate a PAC file.");
-    }
-
-    private void buildUi() {
-        root = new JPanel(new BorderLayout(12,12));
-        root.setBorder(new EmptyBorder(10,10,10,10));
-
-        JPanel top = new JPanel(new GridBagLayout());
-        GridBagConstraints c = new GridBagConstraints();
-        c.insets = new Insets(4,4,4,4);
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.weightx = 1.0;
-
-        hostAllow = new JTextField(".*(api|login|auth|gateway).*|localhost|127\\.0\\.0\\.1");
-        portAllow = new JTextField("80,443,8080,8443");
-        mimeAllow = new JTextField("^(application/json|application/xml|text/.*|application/octet-stream)$");
-        onlyMatches = new JCheckBox("Show/annotate only matching traffic", false);
-
-        JButton apply = new JButton(new AbstractAction("Apply Filters") {
-            @Override public void actionPerformed(ActionEvent e) { applyFilters(); }
-        });
-        JButton genPac = new JButton(new AbstractAction("Generate PAC…") {
-            @Override public void actionPerformed(ActionEvent e) { generatePac(); }
-        });
-        JButton help = new JButton(new AbstractAction("Quick Start") {
-            @Override public void actionPerformed(ActionEvent e) { showQuickStart(); }
-        });
-
-        int row=0;
-        c.gridx=0; c.gridy=row; top.add(new JLabel("Host allow (regex)"), c);
-        c.gridx=1; c.gridy=row++; top.add(hostAllow, c);
-        c.gridx=0; c.gridy=row; top.add(new JLabel("Port allow (comma)"), c);
-        c.gridx=1; c.gridy=row++; top.add(portAllow, c);
-        c.gridx=0; c.gridy=row; top.add(new JLabel("MIME allow (regex)"), c);
-        c.gridx=1; c.gridy=row++; top.add(mimeAllow, c);
-        c.gridx=0; c.gridy=row; top.add(onlyMatches, c);
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttons.add(help); buttons.add(genPac); buttons.add(apply);
-        c.gridx=1; c.gridy=row++; top.add(buttons, c);
-
-        root.add(top, BorderLayout.NORTH);
-
-        eventsModel = new DefaultTableModel(new Object[]{"Time","Direction","Host","Port","Method/Code","Label"}, 0);
-        events = new JTable(eventsModel);
-        root.add(new JScrollPane(events), BorderLayout.CENTER);
-
-        notes = new JTextArea();
-        notes.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        notes.setRows(6);
-        notes.setBorder(BorderFactory.createTitledBorder("Notes / Outputs"));
-        root.add(new JScrollPane(notes), BorderLayout.SOUTH);
-
-        callbacks.addSuiteTab(this);
-        applyFilters();
-    }
-
-    private void applyFilters() {
-        try { hostPattern = Pattern.compile(hostAllow.getText()); }
-        catch (Exception e) { warn("Bad host regex: " + e.getMessage()); }
-
-        allowedPorts.clear();
-        for (String p : portAllow.getText().split(",")) {
-            try { allowedPorts.add(Integer.parseInt(p.trim())); } catch (Exception ignored) {}
-        }
-
-        try { mimePattern = Pattern.compile(mimeAllow.getText()); }
-        catch (Exception e) { warn("Bad MIME regex: " + e.getMessage()); }
-
-        log("Filters applied: host=" + hostPattern + ", ports=" + allowedPorts + ", mime=" + mimePattern);
-    }
-
-    private void showQuickStart() {
-        String hint =
-            "Quick Start — THC4M3 (MVP)\n\n" +
-            "1) Point your thick client to Burp (127.0.0.1:8080) or set a PAC.\n" +
-            "2) Add host patterns and ports above for your app.\n" +
-            "3) Toggle ‘Show/annotate only matching traffic’ to reduce noise.\n" +
-            "4) Exercise the app; matching traffic will be labeled [TCB].\n" +
-            "Tip: For non-proxy-aware apps, use OS redirection (Proxifier/redsocks/pf).\n";
-        notes.setText(hint);
-    }
-
-    private void generatePac() {
+        // Build UI + tab first so a later failure doesn't hide the tab.
         try {
-            String burpHost = InetAddress.getLocalHost().getHostAddress();
-            int burpPort = 8080;
+            initUI();
+            callbacks.addSuiteTab(this);
+        } catch (Throwable t) {
+            callbacks.printError("THC4M3: UI init failed: " + t);
+        }
 
-            IHttpRequestResponse[] hist = callbacks.getProxyHistory();
-            if (hist != null && hist.length > 0) {
-                try { burpPort = hist[0].getHttpService().getPort(); } catch (Throwable ignored) {}
-            }
-
-            String hostsRegex = hostAllow.getText();
-            String pac = PacBuilder.buildSelectivePac(burpHost, burpPort, hostsRegex);
-            File out = File.createTempFile("tcb-", ".pac");
-            try (FileWriter fw = new FileWriter(out, StandardCharsets.UTF_8)) { fw.write(pac); }
-            log("PAC written: " + out.getAbsolutePath());
-            notes.append("\nSet system proxy using this PAC file for targeted interception.\n");
-        } catch (IOException e) {
-            warn("PAC generation failed: " + e.getMessage());
+        // Wire listeners + settings in a separate try/catch for safety.
+        try {
+            restoreSettings();
+            callbacks.registerHttpListener(this);
+            callbacks.registerProxyListener(this);
+            info("Loaded. Set allow-lists, then optional PAC.");
+        } catch (Throwable t) {
+            callbacks.printError("THC4M3: Listener/bootstrap failed: " + t);
+            warn("Some listeners failed; see Extender → Errors.");
         }
     }
 
-    private void log(String msg) {
-        callbacks.printOutput(msg);
-        eventsModel.addRow(new Object[]{timestamp(), "info", "-", "-", "-", msg});
-    }
-    private void warn(String msg) {
-        callbacks.printError(msg);
-        eventsModel.addRow(new Object[]{timestamp(), "warn", "-", "-", "-", msg});
-    }
-    private String timestamp() {
-        return new SimpleDateFormat("HH:mm:ss").format(new Date());
-    }
-
-    // ITab
+    // =============================================================================================
+    //  ITab
+    // =============================================================================================
     @Override public String getTabCaption() { return "THC4M3"; }
     @Override public Component getUiComponent() { return root; }
 
-    // IHttpListener
+    // =============================================================================================
+    //  IHttpListener / IProxyListener
+    // =============================================================================================
     @Override
     public void processHttpMessage(int toolFlag, boolean messageIsRequest, IHttpRequestResponse messageInfo) {
         try {
             IHttpService svc = messageInfo.getHttpService();
-            String host = svc.getHost();
-            int port = svc.getPort();
+            if (svc == null) return;
+
+            boolean hostOk = hostAllowed(svc);
+            boolean portOk = portAllowed(svc);
 
             if (messageIsRequest) {
-                if (matchesHostPort(host, port)) {
-                    IRequestInfo ri = helpers.analyzeRequest(messageInfo);
-                    List<String> headers = new ArrayList<>(ri.getHeaders());
-                    headers.add("X-TCB: 1");
-                    byte[] body = Arrays.copyOfRange(messageInfo.getRequest(), ri.getBodyOffset(), messageInfo.getRequest().length);
-                    byte[] updated = helpers.buildHttpMessage(headers, body);
-                    messageInfo.setRequest(updated);
-                    messageInfo.setComment(TAG + " host/port match");
-                    eventsModel.addRow(new Object[]{timestamp(), "→", host, String.valueOf(port), ri.getMethod(), "labeled"});
+                if (hostOk && portOk) {
+                    // Add a soft tag/comment to help triage in Proxy history
+                    messageInfo.setComment("[TCB] host/port match");
+                    addEvent("→", svc.getHost(), svc.getPort(), httpMethodOf(messageInfo.getRequest()), "labeled");
+                } else if (!onlyMatchChk.isSelected()) {
+                    addEvent("→", "-", "-", httpMethodOf(messageInfo.getRequest()), "skipped");
                 }
             } else {
-                if (matchesHostPort(host, port) && responseMimeAllowed(messageInfo)) {
-                    IResponseInfo rr = helpers.analyzeResponse(messageInfo.getResponse());
-                    messageInfo.setComment(TAG + " mime match: " + mimeFrom(rr));
-                    eventsModel.addRow(new Object[]{timestamp(), "←", host, String.valueOf(port), String.valueOf(rr.getStatusCode()), "labeled"});
+                if (hostOk && portOk && responseMimeAllowed(messageInfo)) {
+                    IResponseInfo ri = helpers.analyzeResponse(messageInfo.getResponse());
+                    messageInfo.setComment("[TCB] mime match: " + mimeFrom(ri));
+                    addEvent("←", svc.getHost(), svc.getPort(), String.valueOf(ri.getStatusCode()), "labeled");
+                } else if (!onlyMatchChk.isSelected()) {
+                    IResponseInfo ri = helpers.analyzeResponse(messageInfo.getResponse());
+                    addEvent("←", "-", "-", ri == null ? "-" : String.valueOf(ri.getStatusCode()), "skipped");
                 }
             }
         } catch (Throwable t) {
-            warn("processHttpMessage: " + t);
+            callbacks.printError("THC4M3 processHttpMessage error: " + t);
         }
     }
 
-    // IProxyListener
-    @Override public void processProxyMessage(boolean messageIsRequest, IInterceptedProxyMessage message) { /* noop */ }
-
-    // Helpers
-    private boolean matchesHostPort(String host, int port) {
-        boolean hostOk = hostPattern.matcher(host).find();
-        boolean portOk = allowedPorts.contains(port);
-        return hostOk && portOk;
+    @Override
+    public void processProxyMessage(boolean messageIsRequest, IInterceptedProxyMessage message) {
+        // No-op for now; all work happens in processHttpMessage.
     }
 
-    private boolean responseMimeAllowed(IHttpRequestResponse msg) {
-        IResponseInfo rr = helpers.analyzeResponse(msg.getResponse());
-        String mime = mimeFrom(rr);
+    // =============================================================================================
+    //  UI
+    // =============================================================================================
+    private void initUI() {
+        root = new JPanel(new BorderLayout(8, 8));
+        root.setBorder(new EmptyBorder(6, 6, 6, 6));
+
+        JPanel controls = new JPanel(new GridBagLayout());
+        GridBagConstraints gc = new GridBagConstraints();
+        gc.insets = new Insets(3, 3, 3, 3);
+        gc.fill = GridBagConstraints.HORIZONTAL;
+        gc.weightx = 0;
+
+        int r = 0;
+
+        // Host allow (regex)
+        gc.gridx = 0; gc.gridy = r; controls.add(new JLabel("Host allow (regex)"), gc);
+        hostRegexField = new JTextField(".*(api|login|auth|gateway).*|localhost|127\\.0\\.0\\.1");
+        gc.gridx = 1; gc.gridy = r; gc.weightx = 1; controls.add(hostRegexField, gc);
+
+        JButton quick = new JButton("Quick Start");
+        quick.addActionListener(e -> showQuickStart());
+        gc.gridx = 2; gc.gridy = r; gc.weightx = 0; controls.add(quick, gc);
+        r++;
+
+        // Port allow (comma)
+        gc.gridx = 0; gc.gridy = r; controls.add(new JLabel("Port allow (comma)"), gc);
+        portCsvField = new JTextField("80,443,8080,8443");
+        gc.gridx = 1; gc.gridy = r; gc.weightx = 1; controls.add(portCsvField, gc);
+
+        JButton pac = new JButton("Generate PAC…");
+        pac.addActionListener(e -> onGeneratePac());
+        gc.gridx = 2; gc.gridy = r; gc.weightx = 0; controls.add(pac, gc);
+        r++;
+
+        // MIME allow (regex)
+        gc.gridx = 0; gc.gridy = r; controls.add(new JLabel("MIME allow (regex)"), gc);
+        mimeRegexField = new JTextField("^(application/json|application/xml|text/.*|application/octet-stream)$");
+        gc.gridx = 1; gc.gridy = r; gc.weightx = 1; controls.add(mimeRegexField, gc);
+
+        JButton apply = new JButton("Apply Filters");
+        apply.addActionListener(e -> {
+            recompilePatternsAndPorts();
+            saveSettings();
+            info("Filters applied: host=" + hostRegexField.getText());
+        });
+        gc.gridx = 2; gc.gridy = r; gc.weightx = 0; controls.add(apply, gc);
+        r++;
+
+        // Only matching toggle
+        onlyMatchChk = new JCheckBox("Show/annotate only matching traffic");
+        gc.gridx = 0; gc.gridy = r; gc.gridwidth = 3; controls.add(onlyMatchChk, gc);
+        r++;
+
+        root.add(controls, BorderLayout.NORTH);
+
+        // Tabs (Events + Checklist)
+        tabs = new JTabbedPane(JTabbedPane.TOP);
+
+        // Events table
+        JTable eventsTable = new JTable(eventsModel = new DefaultTableModel(
+                new Object[]{"Time", "Direction", "Host", "Port", "Method/Code", "Label"}, 0) {
+            @Override public boolean isCellEditable(int row, int col) { return false; }
+        });
+        eventsTable.setFillsViewportHeight(true);
+        JScrollPane tableScroll = new JScrollPane(eventsTable);
+
+        JPanel events = new JPanel(new BorderLayout());
+        events.add(tableScroll, BorderLayout.CENTER);
+
+        JTextArea tips = new JTextArea(
+            "Quick Start — THC4M3 (MVP)\n" +
+            "1) Point your thick client to Burp (127.0.0.1:8080) or set a PAC.\n" +
+            "2) Add host patterns and ports above for your app.\n" +
+            "3) Toggle ‘Show/annotate only matching traffic’ to reduce noise.\n" +
+            "4) Exercise the app; matching traffic will be labeled [TCB].\n" +
+            "Tip: For non-proxy-aware apps, use OS redirection (Proxifier/redsocks/pf)."
+        );
+        tips.setEditable(false);
+        tips.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
+        tips.setBorder(new EmptyBorder(6, 6, 6, 6));
+        events.add(tips, BorderLayout.SOUTH);
+
+        tabs.addTab("Events", events);
+
+        // Checklist sub-tab
+        ChecklistPanel checklistPanel = new ChecklistPanel(callbacks);
+        tabs.addTab("Checklist", checklistPanel.getPanel());
+
+        root.add(tabs, BorderLayout.CENTER);
+    }
+
+    // =============================================================================================
+    //  Actions
+    // =============================================================================================
+    private void onGeneratePac() {
+        try {
+            recompilePatternsAndPorts(); // make sure hostPattern is current
+            String pac = PacBuilder
+                    .fromRegex(hostPattern)
+                    .withProxy("127.0.0.1:8080")
+                    .build();
+
+            // Copy to clipboard
+            Toolkit.getDefaultToolkit().getSystemClipboard()
+                   .setContents(new StringSelection(pac), null);
+
+            // Show dialog with PAC text
+            JTextArea area = new JTextArea(pac);
+            area.setEditable(false);
+            area.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+            JScrollPane sc = new JScrollPane(area);
+            sc.setPreferredSize(new Dimension(650, 350));
+            JOptionPane.showMessageDialog(root, sc, "PAC generated (copied to clipboard)",
+                    JOptionPane.INFORMATION_MESSAGE);
+            info("PAC copied to clipboard.");
+        } catch (Throwable t) {
+            callbacks.printError("THC4M3 PAC generation failed: " + t);
+            warn("PAC generation failed; see Extender → Errors.");
+        }
+    }
+
+    private void showQuickStart() {
+        JTextArea area = new JTextArea(
+            "Quick Start — THC4M3\n\n" +
+            "• Set your app to proxy via 127.0.0.1:8080 (or use ‘Generate PAC…’).\n" +
+            "• Enter host regex and allowed ports.\n" +
+            "• Optional: narrow MIME types.\n" +
+            "• Click ‘Apply Filters’, then exercise the app.\n" +
+            "• Matching traffic is labeled [TCB] and shown in the Events tab."
+        );
+        area.setEditable(false);
+        area.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        area.setBorder(new EmptyBorder(6, 6, 6, 6));
+        JOptionPane.showMessageDialog(root, new JScrollPane(area), "THC4M3 Quick Start",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    // =============================================================================================
+    //  Filters & helpers
+    // =============================================================================================
+    private void recompilePatternsAndPorts() {
+        try {
+            hostPattern = Pattern.compile(hostRegexField.getText());
+        } catch (Exception e) {
+            hostPattern = Pattern.compile(".*");
+            warn("Invalid host regex; defaulting to \".*\"");
+        }
+        try {
+            mimePattern = Pattern.compile(mimeRegexField.getText());
+        } catch (Exception e) {
+            mimePattern = Pattern.compile("^(application/json|application/xml|text/.*|application/octet-stream)$");
+            warn("Invalid MIME regex; using default.");
+        }
+        allowedPorts.clear();
+        String csv = portCsvField.getText();
+        if (csv != null) {
+            for (String s : csv.split(",")) {
+                s = s.trim();
+                if (s.isEmpty()) continue;
+                try { allowedPorts.add(Integer.parseInt(s)); }
+                catch (NumberFormatException ignored) { /* skip */ }
+            }
+        }
+        if (allowedPorts.isEmpty()) allowedPorts.addAll(Arrays.asList(80, 443, 8080, 8443));
+    }
+
+    private boolean hostAllowed(IHttpService svc) {
+        String host = svc.getHost() == null ? "" : svc.getHost();
+        return hostPattern.matcher(host).find();
+    }
+
+    private boolean portAllowed(IHttpService svc) {
+        return allowedPorts.contains(svc.getPort());
+    }
+
+    private boolean responseMimeAllowed(IHttpRequestResponse messageInfo) {
+        byte[] resp = messageInfo.getResponse();
+        if (resp == null) return false;
+        IResponseInfo ri = helpers.analyzeResponse(resp);
+        String mime = mimeFrom(ri);
         return mimePattern.matcher(mime).find();
     }
 
-    private String mimeFrom(IResponseInfo rr) {
-        String inferred = rr.getInferredMimeType();
-        if (inferred == null || inferred.isEmpty() || "unknown".equalsIgnoreCase(inferred)) {
-            inferred = rr.getStatedMimeType();
+    private String mimeFrom(IResponseInfo ri) {
+        if (ri == null) return "unknown";
+        String m = ri.getStatedMimeType();
+        if (m == null || m.isEmpty() || "unknown".equalsIgnoreCase(m)) {
+            m = ri.getInferredMimeType();
         }
-        return inferred == null ? "unknown" : inferred;
+        return m == null ? "unknown" : m;
     }
 
-    // IMessageEditorController (placeholders)
-    @Override public IHttpService getHttpService() { return null; }
-    @Override public byte[] getRequest() { return new byte[0]; }
-    @Override public byte[] getResponse() { return new byte[0]; }
+    private String httpMethodOf(byte[] request) {
+        if (request == null) return "-";
+        try {
+            IRequestInfo ri = helpers.analyzeRequest(request);
+            return ri.getMethod();
+        } catch (Throwable t) {
+            return "-";
+        }
+    }
+
+    // =============================================================================================
+    //  Settings
+    // =============================================================================================
+    private void saveSettings() {
+        callbacks.saveExtensionSetting(K_HOST, hostRegexField.getText());
+        callbacks.saveExtensionSetting(K_PORTS, portCsvField.getText());
+        callbacks.saveExtensionSetting(K_MIME, mimeRegexField.getText());
+        callbacks.saveExtensionSetting(K_ONLY, Boolean.toString(onlyMatchChk.isSelected()));
+    }
+
+    private void restoreSettings() {
+        String host = nvl(callbacks.loadExtensionSetting(K_HOST),
+                ".*(api|login|auth|gateway).*|localhost|127\\.0\\.0\\.1");
+        String ports = nvl(callbacks.loadExtensionSetting(K_PORTS), "80,443,8080,8443");
+        String mime = nvl(callbacks.loadExtensionSetting(K_MIME),
+                "^(application/json|application/xml|text/.*|application/octet-stream)$");
+        boolean only = Boolean.parseBoolean(nvl(callbacks.loadExtensionSetting(K_ONLY), "false"));
+
+        hostRegexField.setText(host);
+        portCsvField.setText(ports);
+        mimeRegexField.setText(mime);
+        onlyMatchChk.setSelected(only);
+
+        recompilePatternsAndPorts();
+    }
+
+    private static String nvl(String s, String def) { return (s == null || s.isEmpty()) ? def : s; }
+
+    // =============================================================================================
+    //  Events
+    // =============================================================================================
+    private void addEvent(String dirArrow, Object host, Object port, String methodOrCode, String label) {
+        String time = LocalTime.now().format(TS);
+        eventsModel.addRow(new Object[]{
+                time,
+                "info".equals(dirArrow) ? "info" : dirArrow,
+                host,
+                port,
+                methodOrCode,
+                label
+        });
+    }
+
+    private void info(String msg) {
+        callbacks.printOutput("THC4M3: " + msg);
+        addEvent("info", "-", "-", "-", msg);
+    }
+
+    private void warn(String msg) {
+        callbacks.printOutput("THC4M3: " + msg);
+        addEvent("info", "-", "-", "-", msg);
+    }
 }
