@@ -4,25 +4,30 @@ group = 'com.jb'
 version = 'dev'
 
 java {
-    toolchain { languageVersion = JavaLanguageVersion.of(17) }   // <- compile to Java 17
+    toolchain { languageVersion = JavaLanguageVersion.of(17) }
 }
 
 repositories { mavenCentral() }
 
 dependencies {
+    // Burp API (no local jar needed)
     compileOnly 'net.portswigger.burp.extender:burp-extender-api:2.3'
 }
 
 tasks.withType(JavaCompile) { options.encoding = 'UTF-8' }
 
 tasks.jar {
-    archiveBaseName = 'thc4m3'   // -> build/libs/thc4m3.jar
+    // simple jar name
+    archiveBaseName = 'thc4m3'
     archiveVersion = ''
     manifest {
         attributes(
             'Implementation-Title': 'THC4M3 Thick Client Bridge',
             'Implementation-Version': 'dev',
-            'Burp-Extender-Class': 'com.jb.thickclient.MinExt'   // minimal loader
+            // use the **real** extender for normal dev
+            'Burp-Extender-Class': 'com.jb.thickclient.BurpExtender'
+            // if Burp hangs, flip this to MinExt and rebuild:
+            // 'Burp-Extender-Class': 'com.jb.thickclient.MinExt'
         )
     }
 }
