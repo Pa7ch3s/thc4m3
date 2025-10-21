@@ -29,11 +29,14 @@ THC4M3 is a minimal Burp extension that helps you test thick-client apps without
 -  Extension type: Java
 -  Extension file: build/libs/thc4m3.jar
 
+
 3. Open the THC4M3 tab and set filters:
 - Host allow (regex): .*(api|login|auth|gateway).*|localhost|127\.0\.0\.1
 - Port allow (comma): 80,443,8080,8443
 - MIME allow (regex): ^(application/json|application/xml|text/.*|application/octet-stream)$
 - Click Apply Filters (or Quick Start)
+
+---
 
 Route a test request through Burp
 curl --proxy http://127.0.0.1:8080 https://httpbin.org/post \
