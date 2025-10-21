@@ -91,6 +91,4 @@ Richer checklist with WSTG mappings
 
 ---
 
-## See Issues
- and Projects
- for active work.
+## See Issues and Projects for active work.
