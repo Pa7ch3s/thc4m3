@@ -1,56 +1,50 @@
 # THC4M3 — Thick Client Helper for Burp
+[![Build](https://img.shields.io/github/actions/workflow/status/Pa7ch3s/THC4me/build.yml?branch=main&label=build)](../../actions)
+[![Release](https://img.shields.io/github/v/release/Pa7ch3s/THC4me)](../../releases)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> **Status:** MVP • Works on macOS with Burp Suite Pro/Community and Java 17.
+> **Status:** MVP (pre-release). Tested on macOS with Burp Suite Pro/Community and Java 17.
+> THC4M3 is a minimal Burp extension that helps you test thick-client apps without drowning in noise: label/annotate only the traffic you care about, and generate a quick PAC file.
+---
 
-THC4M3 is a minimal Burp extension that helps you test thick-client apps without drowning in noise. It lets you:
+## ✨ What it does
 
-- **Label/annotate** only the traffic you care about (host/port/MIME filters)
-- **Generate a PAC** so only app domains are proxied
-- **Quick-start** instructions baked into the tab
+- **Events table** that logs/labels interesting requests & responses  
+- **Allow-lists** for **Host (regex)**, **Port (CSV)**, **MIME (regex)**  
+- **Show/annotate only matching traffic** to reduce noise  
+- **PAC generator** to route only your target domains via Burp  
+- **Checklist sub-tab** for thick-client test setup (save/load/export)
+
+No telemetry. Everything runs inside Burp.
 
 <img alt="THC4M3 tab screenshot" src="docs/screenshot-tab.png" width="800"/>
 
 ---
 
-## Quick start
+## 🔧 Install
 
-### Requirements
-- Burp Suite (Pro or Community), installed in `/Applications` on macOS
-- Java 17 (Temurin recommended)
+1. Download the latest `thc4m3.jar` from **[Releases](../../releases)**.  
+2. In Burp: **Extensions → Installed → Add → Java** and select the JAR.  
+3. Confirm the **THC4M3** tab appears.
 
-### Install
-
-1. Build the JAR
-   ```bash
-   ./gradlew clean jar
-   # Output: build/libs/thc4m3.jar
-   
-2. Burp → Extensions → Installed → Add
--  Extension type: Java
--  Extension file: build/libs/thc4m3.jar
-
-
-3. Open the THC4M3 tab and set filters:
-- Host allow (regex): .*(api|login|auth|gateway).*|localhost|127\.0\.0\.1
-- Port allow (comma): 80,443,8080,8443
-- MIME allow (regex): ^(application/json|application/xml|text/.*|application/octet-stream)$
-- Click Apply Filters (or Quick Start)
-
----
-Route a test request through Burp
-curl --proxy http://127.0.0.1:8080 https://httpbin.org/post \
-  -H "Content-Type: application/json" \
-  --data '{"hello":"world"}' -v
-
-You should see annotated rows in the THC4M3 tab and the request/response in Proxy → HTTP history.
-Tip: Export Burp CA (Proxy → Proxy settings → Import/export CA) and trust in Keychain to avoid -k.
+> If you’re on macOS and running Burp from a mounted **.dmg**, copy it to `/Applications` first.  
+> If HTTPS fails due to TLS interception, install Burp’s CA certificate in your OS trust store or use `curl -k` during smoke tests.
 
 ---
 
-Using with your app
--  System proxy: macOS → Network → Proxies → set HTTP/HTTPS to 127.0.0.1:8080
--  PAC: In THC4M3 click Generate PAC… and use the file via Automatic Proxy Configuration
--  Java apps: launch with
--Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=8080 -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=8080
+## ⚡ Quick start (MVP)
 
+1. In the **THC4M3** tab, set:
+   - **Host allow (regex):** e.g. `.*(api|login|auth|gateway).*|localhost|127\.0\.0\.1`
+   - **Port allow (comma):** `80,443,8080,8443`
+   - **MIME allow (regex):** `^(application/json|application/xml|text/.*|application/octet-stream)$`
+2. Click **Apply Filters**.
+3. (Optional) Click **Generate PAC…** and use it in your app/OS to only proxy target hosts via Burp.
 
+**Smoke tests**
+
+```bash
+# Send traffic through Burp on 127.0.0.1:8080
+curl --proxy http://127.0.0.1:8080 -k https://postman-echo.com/get -I
+curl --proxy http://127.0.0.1:8080 -k https://postman-echo.com/post \
+  -H "Content-Type: application/json" --data '{"hello":"world"}'
