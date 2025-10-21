@@ -17,7 +17,8 @@
 
 No telemetry. Everything runs inside Burp.
 
-<img alt="THC4M3 tab screenshot" src="docs/screenshot-tab.png" width="800"/>
+<img width="105" height="47" alt="image" src="https://github.com/user-attachments/assets/8eff45c3-33f4-42b3-b325-40a50c7d76c5" />
+
 
 ---
 
