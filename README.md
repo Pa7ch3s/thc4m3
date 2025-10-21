@@ -21,7 +21,7 @@ No telemetry. Everything runs inside Burp.
 
 ---
 
-## 🔧 Install
+# 🔧 Install
 
 1. Download the latest `thc4m3.jar` from **[Releases](../../releases)**.  
 2. In Burp: **Extensions → Installed → Add → Java** and select the JAR.  
@@ -32,7 +32,7 @@ No telemetry. Everything runs inside Burp.
 
 ---
 
-## ⚡ Quick start (MVP)
+# ⚡ Quick start (MVP)
 
 1. In the **THC4M3** tab, set:
    - **Host allow (regex):** e.g. `.*(api|login|auth|gateway).*|localhost|127\.0\.0\.1`
@@ -44,29 +44,29 @@ No telemetry. Everything runs inside Burp.
 ---
 **Smoke tests**
 
-# Send traffic through Burp on 127.0.0.1:8080
+## Send traffic through Burp on 127.0.0.1:8080
 curl --proxy http://127.0.0.1:8080 -k https://postman-echo.com/get -I
 curl --proxy http://127.0.0.1:8080 -k https://postman-echo.com/post \
   -H "Content-Type: application/json" --data '{"hello":"world"}'
 
 ---
-🧩 Checklist tab
+# 🧩 Checklist tab
 
 A thin, practical list for thick-client setup (pinning, TLS suites, IPC/local endpoints, file I/O caches/logs/secrets, etc.).
 Use Save / Load / Export… to persist or share checklists for a project.
 
 ---
-🛠️ Build locally
+# 🛠️ Build locally
 
 Requires Java 17 and Gradle Wrapper (included).
 
 ./gradlew clean jar
-# JAR: build/libs/thc4m3.jar
+## JAR: build/libs/thc4m3.jar
 unzip -p build/libs/thc4m3.jar META-INF/MANIFEST.MF | grep Burp-Extender-Class
-# Expect: Burp-Extender-Class: com.jb.thickclient.BurpExtender
+## Expect: Burp-Extender-Class: com.jb.thickclient.BurpExtender
 
 ---
-❓ Troubleshooting
+# ❓ Troubleshooting
 
 Extension loads but no tab: Ensure you launched Burp from /Applications (macOS app sandbox prompts can block access when run from a DMG).
 
@@ -75,7 +75,7 @@ HTTPS failures: Install Burp CA into your OS keychain, or use -k only for quick 
 No events appear: Confirm your Host/Port/MIME allow-lists match, then generate a PAC or point your app to the Burp proxy.
 
 ---
-🧭 Roadmap
+# 🧭 Roadmap
 
 Backfill labeling from Proxy history
 
@@ -86,6 +86,6 @@ Status chip / counters
 Richer checklist with WSTG mappings
 
 ---
-See Issues
+## See Issues
  and Projects
  for active work.
