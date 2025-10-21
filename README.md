@@ -42,7 +42,7 @@ No telemetry. Everything runs inside Burp.
 3. (Optional) Click **Generate PAC…** and use it in your app/OS to only proxy target hosts via Burp.
 
 ---
-**Smoke tests**
+# **Smoke tests**
 
 ## Send traffic through Burp on 127.0.0.1:8080
 curl --proxy http://127.0.0.1:8080 -k https://postman-echo.com/get -I
@@ -50,12 +50,14 @@ curl --proxy http://127.0.0.1:8080 -k https://postman-echo.com/post \
   -H "Content-Type: application/json" --data '{"hello":"world"}'
 
 ---
+
 # 🧩 Checklist tab
 
 A thin, practical list for thick-client setup (pinning, TLS suites, IPC/local endpoints, file I/O caches/logs/secrets, etc.).
 Use Save / Load / Export… to persist or share checklists for a project.
 
 ---
+
 # 🛠️ Build locally
 
 Requires Java 17 and Gradle Wrapper (included).
@@ -66,6 +68,7 @@ unzip -p build/libs/thc4m3.jar META-INF/MANIFEST.MF | grep Burp-Extender-Class
 ## Expect: Burp-Extender-Class: com.jb.thickclient.BurpExtender
 
 ---
+
 # ❓ Troubleshooting
 
 Extension loads but no tab: Ensure you launched Burp from /Applications (macOS app sandbox prompts can block access when run from a DMG).
@@ -75,6 +78,7 @@ HTTPS failures: Install Burp CA into your OS keychain, or use -k only for quick 
 No events appear: Confirm your Host/Port/MIME allow-lists match, then generate a PAC or point your app to the Burp proxy.
 
 ---
+
 # 🧭 Roadmap
 
 Backfill labeling from Proxy history
@@ -86,6 +90,7 @@ Status chip / counters
 Richer checklist with WSTG mappings
 
 ---
+
 ## See Issues
  and Projects
  for active work.
