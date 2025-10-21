@@ -1,33 +1,28 @@
-plugins {
-    id 'java'
-    id 'idea'
-}
+plugins { id 'java' }
 
 group = 'com.jb'
-version = '0.1.0'
+version = 'dev'
 
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
+    toolchain { languageVersion = JavaLanguageVersion.of(17) }   // <- compile to Java 17
 }
 
 repositories { mavenCentral() }
 
 dependencies {
-    // Use Burp Extender API from Maven Central (no local jar needed)
     compileOnly 'net.portswigger.burp.extender:burp-extender-api:2.3'
-    compileOnly 'org.jetbrains:annotations:24.1.0'
 }
 
 tasks.withType(JavaCompile) { options.encoding = 'UTF-8' }
 
-tasks.register('fatJar', Jar) {
-    archiveClassifier = 'all'
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from sourceSets.main.output
+tasks.jar {
+    archiveBaseName = 'thc4m3'   // -> build/libs/thc4m3.jar
+    archiveVersion = ''
     manifest {
-        attributes 'Implementation-Title': 'THC4M3 Thick Client Bridge',
-                   'Implementation-Version': version
+        attributes(
+            'Implementation-Title': 'THC4M3 Thick Client Bridge',
+            'Implementation-Version': 'dev',
+            'Burp-Extender-Class': 'com.jb.thickclient.MinExt'   // minimal loader
+        )
     }
 }
