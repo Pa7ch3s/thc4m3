@@ -1,0 +1,21 @@
+name: Build
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+jobs:
+  gradle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Build
+        run: ./gradlew clean jar --no-daemon
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: thc4m3.jar
+          path: build/libs/thc4m3.jar
