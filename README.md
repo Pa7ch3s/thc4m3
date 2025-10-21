@@ -37,7 +37,6 @@ THC4M3 is a minimal Burp extension that helps you test thick-client apps without
 - Click Apply Filters (or Quick Start)
 
 ---
-
 Route a test request through Burp
 curl --proxy http://127.0.0.1:8080 https://httpbin.org/post \
   -H "Content-Type: application/json" \
@@ -46,6 +45,7 @@ curl --proxy http://127.0.0.1:8080 https://httpbin.org/post \
 You should see annotated rows in the THC4M3 tab and the request/response in Proxy → HTTP history.
 Tip: Export Burp CA (Proxy → Proxy settings → Import/export CA) and trust in Keychain to avoid -k.
 
+---
 
 Using with your app
 -  System proxy: macOS → Network → Proxies → set HTTP/HTTPS to 127.0.0.1:8080
