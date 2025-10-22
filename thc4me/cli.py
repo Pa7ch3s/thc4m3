@@ -3,13 +3,13 @@
 """
 THC4me CLI — first-cut static scanner + sqlmap-style toolkit
 Usage examples:
-  thc4me_cli.py scan app.apk --pretty --out out.json
-  thc4me_cli.py strings app.apk --min-len 5 --max-lines 2000
-  thc4me_cli.py imports sample.exe
-  thc4me_cli.py entropy sample.exe
-  thc4me_cli.py manifest app.apk
-  thc4me_cli.py tools --check
-  thc4me_cli.py manual
+  thc4me.cli.py scan app.apk --pretty --out out.json
+  thc4me.cli.py strings app.apk --min-len 5 --max-lines 2000
+  thc4me.cli.py imports sample.exe
+  thc4me.cli.py entropy sample.exe
+  thc4me.cli.py manifest app.apk
+  thc4me.cli.py tools --check
+  thc4me.cli.py manual
 """
 
 import argparse, hashlib, json, mimetypes, os, re, shutil, subprocess, sys, uuid

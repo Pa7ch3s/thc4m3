@@ -6,7 +6,7 @@ Static parser module for THC4me backend.
 Functions:
 - analyze(path) -> dict with keys: artifacts[], findings[]
 
-Intended to be imported and called by thc4me_cli.py or thc4me_daemon.py.
+Intended to be imported and called by thc4me.cli.py or thc4me.daemon.py.
 """
 
 import os
