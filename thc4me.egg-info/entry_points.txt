@@ -1,0 +1,4 @@
+[console_scripts]
+thc4me = thc4me.cli:main
+thc4me-daemon = thc4me.daemon:main
+thc4me-deep = thc4me.deep:cli

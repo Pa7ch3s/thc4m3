@@ -1,0 +1,9 @@
+LICENSE
+README.md
+pyproject.toml
+src/thc4me.egg-info/PKG-INFO
+src/thc4me.egg-info/SOURCES.txt
+src/thc4me.egg-info/dependency_links.txt
+src/thc4me.egg-info/entry_points.txt
+src/thc4me.egg-info/requires.txt
+src/thc4me.egg-info/top_level.txt

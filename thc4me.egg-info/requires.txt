@@ -1,0 +1,5 @@
+lief
+pefile
+fastapi
+uvicorn
+python-multipart
