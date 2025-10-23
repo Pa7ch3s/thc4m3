@@ -1,7 +1,7 @@
 # thc4me — Thick Client Extension for Burp Suite
-[![Build](https://github.com/Pa7ch3s/THC4me/actions/workflows/build.yml/badge.svg?branch=main)
-[![Release workflow](https://github.com/Pa7ch3s/THC4me/actions/workflows/release.yml/badge.svg)](https://github.com/Pa7ch3s/THC4me/actions/workflows/release.yml)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+[![build-release](https://github.com/Pa7ch3s/thc4me/actions/workflows/release.yml/badge.svg)](../../actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > **Status:** MVP (pre-release). Tested on macOS with Burp Suite Pro/Community and Java 17.
 > THC4M3 is a minimal Burp extension that helps you test thick-client apps without drowning in noise: label/annotate only the traffic you care about, and generate a quick PAC file.
