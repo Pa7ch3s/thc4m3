@@ -17,7 +17,7 @@
 
 No telemetry. Everything runs inside Burp.
 
-<img width="150" height="170" alt="image" src="https://github.com/user-attachments/assets/41c58eee-93d4-446c-9b15-9396bd3f183c" />
+<img width="1000" height="1000" alt="image" src="https://github.com/user-attachments/assets/41c58eee-93d4-446c-9b15-9396bd3f183c" />
 
 ---
 
