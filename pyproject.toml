@@ -15,5 +15,6 @@ where = ["."]
 include = ["thc4me*"]
 
 [project.scripts]
+thc4me-deep = "thc4me.deep:cli"
 thc4me = "thc4me.cli:main"
 thc4me-daemon = "thc4me.daemon:main"
