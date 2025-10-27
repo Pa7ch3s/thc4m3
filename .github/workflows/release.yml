@@ -1,26 +1,17 @@
-name: Release
+name: build-release
 on:
-  release:
-    types: [published]
-
-permissions:
-  contents: write
-  
+  push:
+    tags: ["v*.*.*"]
 jobs:
-  attach:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-python@v5
         with:
-          distribution: temurin
-          java-version: '17'
-      - run: ./gradlew clean jar --no-daemon
-      - name: Upload asset
-        uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # default, but explicit
+          python-version: "3.12"
+      - run: python -m pip install --upgrade build
+      - run: python -m build
+      - uses: softprops/action-gh-release@v2
         with:
-          files: build/libs/thc4m3.jar
+          files: dist/*.whl
