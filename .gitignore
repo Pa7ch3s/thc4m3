@@ -12,3 +12,7 @@ Logs/
 # build junk
 .gradle/
 *.bak
+
+# Python cache
+__pycache__/
+*.pyc
