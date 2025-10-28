@@ -1,10 +1,8 @@
 [build-system]
-requires = ["setuptools>=77", "wheel"]
+requires = ["setuptools<75", "wheel"]
 build-backend = "setuptools.build_meta"
-
 [project]
-license-files = ["LICENSE"]
-license = "MIT"
+license = { text = "MIT" }
 name = "thc4me"
 version = "0.3.1"
 description = "Static-triage CLI and lightweight HTTP daemon for quick file inspection. Supports PE, ELF, Mach-O, APK, IPA."
@@ -29,3 +27,6 @@ include = ["thc4me*"]
 
 # [tool.setuptools] (unused)
 # moved to [project].license-files
+
+[tool.setuptools]
+license-files = ["LICENSE"]
