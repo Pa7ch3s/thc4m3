@@ -30,3 +30,6 @@ include = ["thc4me*"]
 
 [tool.setuptools]
 license-files = ["LICENSE"]
+
+[project.optional-dependencies]
+daemon = ["fastapi>=0.110", "uvicorn>=0.30"]
