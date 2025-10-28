@@ -1,20 +1,31 @@
 [build-system]
-requires = ["setuptools>=68","wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
+license-files = ["LICENSE"]
+license = "MIT"
 name = "thc4me"
-version = "0.3.0"
-requires-python = ">=3.9"
-dependencies = ["lief","pefile","fastapi","uvicorn","python-multipart"]
-authors = [{name="Jerrod Baker"}]
-readme = "README.md"
+version = "0.3.1"
+description = "Static-triage CLI and lightweight HTTP daemon for quick file inspection. Supports PE, ELF, Mach-O, APK, IPA."
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.8"
+authors = [{ name = "Pa7ch3s" }]
+dependencies = []
+classifiers = [
+
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+]
+
+[project.scripts]
+thc4me = "thc4me.cli:main"
+thc4me-daemon = "thc4me.daemon:main"
+thc4me-deep = "thc4me.deep:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["thc4me*"]
 
-[project.scripts]
-thc4me-deep = "thc4me.deep:cli"
-thc4me = "thc4me.cli:main"
-thc4me-daemon = "thc4me.daemon:main"
+# [tool.setuptools] (unused)
+# moved to [project].license-files

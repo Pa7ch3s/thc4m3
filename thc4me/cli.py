@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import importlib.metadata as _im
 # -*- coding: utf-8 -*-
 """
 THC4me CLI — first-cut static scanner + sqlmap-style toolkit
@@ -37,8 +38,8 @@ CREDS_RE = re.compile(
     r"(?i)(?:api[_-]?key|apikey|password|pass|secret|token|auth[_-]?key|client_secret)\s*[:=]\s*['\"]?([A-Za-z0-9_\-]{8,})['\"]?"
 )
 
-VERSION = "0.2.0"
-
+from importlib.metadata import version as _pkg_version
+VERSION = _pkg_version("thc4me")
 # -------- Helpers ----------------------
 def run_cmd(cmd, timeout=20):
     p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, check=False)
