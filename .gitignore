@@ -1,18 +1,21 @@
-__pycache__/
-*.pyc
-venv/
-.DS_Store
-*.db
-*.log
-dist/
-build/
-*.egg-info/
-Logs/
-
-# build junk
-.gradle/
-*.bak
-
-# Python cache
-__pycache__/
-*.pyc
+# build artifacts
+/build/
+/dist/
+/*.egg-info/
+/__pycache__/
+/.pytest_cache/
+/.mypy_cache/
+/.coverage
+/htmlcov/
+/.cache/
+/.pyre/
+/.tox/
+/.venv
+/venv/
+/.env
+/.DS_Store
+# local tools
+/.trufflehog-exclude.txt
+/.gitleaks.toml
+/src/*.egg-info/
+/.gradle/
