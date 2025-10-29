@@ -1,3 +1,0 @@
-[console_scripts]
-thc4me = thc4me_cli:main
-thc4me-daemon = thc4me_daemon:app
