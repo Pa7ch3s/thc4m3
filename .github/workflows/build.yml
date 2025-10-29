@@ -15,7 +15,7 @@ jobs:
       - name: Build
         run: ./gradlew clean jar --no-daemon
       - name: Upload JAR
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: thc4m3.jar
           path: build/libs/thc4m3.jar
