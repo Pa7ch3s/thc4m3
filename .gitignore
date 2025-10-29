@@ -17,3 +17,5 @@
 # local tools
 /.trufflehog-exclude.txt
 /.gitleaks.toml
+/src/*.egg-info/
+/.gradle/
